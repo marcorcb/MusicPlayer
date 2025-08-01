@@ -9,29 +9,48 @@ import SwiftUI
 
 struct MiniPlayerView: View {
 
+    // MARK: - Public properties
+
+    @ObservedObject var playerManager: MusicPlayerManager
+    @Binding var expandPlayer: Bool
+
     // MARK: - Body
 
     var body: some View {
-        HStack(spacing: 12) {
-            ArtworkImage(artworkURL: nil)
+        HStack(spacing: 16) {
+                ArtworkImage(artworkURL: playerManager.smallArtworkURL)
 
-            Text("Afterlife")
+            Text(playerManager.songTitle)
+                .foregroundStyle(.backgroundPrimaryInverted)
+                .font(.system(size: 16, weight: .regular))
+                .lineLimit(1)
 
             Spacer()
 
             Group {
-                Button("", systemImage: "play.fill") {
+                Button {
+                    playerManager.togglePlayPause()
+                } label: {
+                    let systemName = playerManager.isPlaying ? "pause.fill" : "play.fill"
 
+                    Image(systemName: systemName)
+                        .resizable()
                 }
+                .disabled(playerManager.isLoading)
+                .frame(width: 22, height: 22)
 
-                Button("", systemImage: "forward.fill") {
-
+                Button {
+                    playerManager.nextSong()
+                } label: {
+                    Image(systemName: "forward.fill")
+                        .resizable()
                 }
+                .disabled(playerManager.isLoading)
+                .frame(width: 22, height: 22)
             }
-            .font(.title3)
-            .foregroundStyle(.primary)
+            .foregroundStyle(.backgroundPrimaryInverted)
         }
-        .padding(.horizontal, 10)
+        .padding(10)
         .frame(height: 55)
         .contentShape(.rect)
     }
@@ -40,5 +59,8 @@ struct MiniPlayerView: View {
 // MARK: - Preview
 
 #Preview {
-    MiniPlayerView()
+    @Previewable @State var expandPlayer: Bool = false
+
+    MiniPlayerView(playerManager: MusicPlayerManager(),
+                   expandPlayer: $expandPlayer)
 }

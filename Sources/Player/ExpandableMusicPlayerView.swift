@@ -11,7 +11,7 @@ struct ExpandableMusicPlayerView: View {
 
     // MARK: - Public properties
 
-    @Binding var show: Bool
+    @ObservedObject var playerManager: MusicPlayerManager
 
     // MARK: - Private properties
 
@@ -26,18 +26,17 @@ struct ExpandableMusicPlayerView: View {
         GeometryReader {
             let size = $0.size
             let safeArea = $0.safeAreaInsets
-            
+            let cornerRadius: CGFloat = safeArea.bottom == 0 ? 0 : 45
+
             ZStack(alignment: .top) {
                 ZStack {
                     Rectangle()
-                        .fill(.songArtist)
+                        .fill(expandPlayer ? .backgroundPrimary : .backgroundMiniPlayer)
                 }
-                .clipShape(.rect(cornerRadius: 8))
+                .clipShape(.rect(cornerRadius: expandPlayer ? cornerRadius : 15))
                 .frame(height: expandPlayer ? nil : 55)
-                .shadow(color: .primary.opacity(0.06), radius: 5, x: 5, y: 5)
-                .shadow(color: .primary.opacity(0.06), radius: 5, x: -5, y: -5)
-                
-                MiniPlayerView()
+
+                MiniPlayerView(playerManager: playerManager, expandPlayer: $expandPlayer)
                     .opacity(expandPlayer ? 0 : 1)
                     .onTapGesture {
                         withAnimation(.smooth(duration: 0.3, extraBounce: 0)) {
@@ -49,8 +48,9 @@ struct ExpandableMusicPlayerView: View {
                         }
                     }
 
-                ExpandedPlayerView(safeArea: safeArea)
-                    .opacity(expandPlayer ? 1 : 0)
+                if expandPlayer {
+                    ExpandedPlayerView(safeArea: safeArea, expandPlayer: $expandPlayer, playerManager: playerManager)
+                }
             }
             .frame(height: expandPlayer ? nil : 55, alignment: .top)
             .frame(maxHeight: .infinity, alignment: .bottom)
@@ -61,6 +61,7 @@ struct ExpandableMusicPlayerView: View {
                 DragGesture()
                     .onChanged({ value in
                         guard expandPlayer else { return }
+
                         let translation = max(value.translation.height, 0)
                         offsetY = translation
                         windowProgress = max(min(translation / size.height, 1), 0) * 0.1
@@ -69,12 +70,14 @@ struct ExpandableMusicPlayerView: View {
                     })
                     .onEnded({ value in
                         guard expandPlayer else { return }
+
                         let translation = max(value.translation.height, 0)
                         let velocity = value.velocity.height / 5
 
                         withAnimation(.smooth(duration: 0.3, extraBounce: 0)) {
                             if (translation + velocity) > (size.height * 0.5) {
                                 expandPlayer = false
+                                windowProgress = 0
                                 resetWindowWithAnimation()
                             } else {
                                 UIView.animate(withDuration: 0.3) {
@@ -86,7 +89,16 @@ struct ExpandableMusicPlayerView: View {
                         }
                     })
             )
+            .onChange(of: expandPlayer) { if expandPlayer == false { resetWindowWithAnimation(duration: 0.2) }
+            }
             .ignoresSafeArea()
+            .alert("Error", isPresented: .constant(playerManager.playerError != nil)) {
+                Button("OK") {
+                    playerManager.playerError = nil
+                }
+            } message: {
+                Text(playerManager.playerError ?? "")
+            }
         }
         .onAppear() {
             if let window = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.keyWindow, mainWindow == nil {
@@ -113,12 +125,19 @@ struct ExpandableMusicPlayerView: View {
         }
     }
 
-    private func resetWindowWithAnimation() {
+    private func resetWindowWithAnimation(duration: TimeInterval = 0.3) {
         if let mainWindow = mainWindow?.subviews.first {
-            UIView.animate(withDuration: 0.3) {
+            UIView.animate(withDuration: duration) {
                 mainWindow.layer.cornerRadius = 0
                 mainWindow.transform = .identity
             }
+        }
+    }
+
+    private func resetWindowWithoutAnimation() {
+        if let mainWindow = mainWindow?.subviews.first {
+            mainWindow.layer.cornerRadius = 0
+            mainWindow.transform = .identity
         }
     }
 }
@@ -126,7 +145,5 @@ struct ExpandableMusicPlayerView: View {
 // MARK: - Preview
 
 #Preview {
-    @Previewable @State var showMiniPlayer: Bool = false
-
-    ExpandableMusicPlayerView(show: $showMiniPlayer)
+    ExpandableMusicPlayerView(playerManager: MusicPlayerManager())
 }

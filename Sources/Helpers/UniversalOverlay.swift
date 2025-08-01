@@ -19,35 +19,69 @@ extension View {
     }
 }
 
+/// Root View Wrapper
 struct RootView<Content: View>: View {
-
+    var content: Content
     init(@ViewBuilder content: @escaping () -> Content) {
         self.content = content()
     }
 
-    var content: Content
     var properties = UniversalOverlayProperties()
 
     var body: some View {
         content
             .environment(properties)
             .onAppear {
-                if let windowScene = (UIApplication.shared.connectedScenes.first as? UIWindowScene), properties.window == nil {
-                    let window = PassthroughWindow(windowScene: windowScene)
-                    window.isHidden = false
-                    window.isUserInteractionEnabled = true
-
-                    let rootViewController = UIHostingController(rootView: UniversalOverlayViews().environment(properties))
-                    rootViewController.view.backgroundColor = .clear
-                    window.rootViewController = rootViewController
-
-                    properties.window = window
-
-                }
+                setupWindow()
+                setupKeyboardObservers()
             }
+            .onDisappear {
+                removeKeyboardObservers()
+            }
+    }
+
+    private func setupWindow() {
+        if let windowScene = (UIApplication.shared.connectedScenes.first as? UIWindowScene), properties.window == nil {
+            let window = PassThroughWindow(windowScene: windowScene)
+            window.isHidden = false
+            window.isUserInteractionEnabled = true
+            window.windowLevel = UIWindow.Level.normal + 0.1
+            /// Setting Up SwiftUI Based RootView Controller
+            let rootViewController = UIHostingController(rootView: UniversalOverlayViews().environment(properties))
+            rootViewController.view.backgroundColor = .clear
+            window.rootViewController = rootViewController
+
+            properties.window = window
+        }
+    }
+
+    private func setupKeyboardObservers() {
+        NotificationCenter.default.addObserver(
+            forName: UIResponder.keyboardWillShowNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            // Abaixar o window level quando keyboard aparecer
+            properties.window?.windowLevel = UIWindow.Level.normal - 1
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: UIResponder.keyboardWillHideNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            // Restaurar window level quando keyboard desaparecer
+            properties.window?.windowLevel = UIWindow.Level.normal + 0.1
+        }
+    }
+
+    private func removeKeyboardObservers() {
+        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
     }
 }
 
+/// Shared Universal Overlay Properties
 @Observable
 class UniversalOverlayProperties {
     var window: UIWindow?
@@ -63,7 +97,7 @@ fileprivate struct UniversalOverlayModifier<ViewContent: View>: ViewModifier {
     var animation: Animation
     @Binding var show: Bool
     @ViewBuilder var viewContent: ViewContent
-
+    /// Local View Properties
     @Environment(UniversalOverlayProperties.self) private var properties
     @State private var viewID: String?
 
@@ -90,13 +124,18 @@ fileprivate struct UniversalOverlayModifier<ViewContent: View>: ViewModifier {
     }
 
     private func removeView() {
+        if let viewID {
+            withAnimation(animation) {
+                properties.views.removeAll(where: { $0.id == viewID })
+            }
 
+            self.viewID = nil
+        }
     }
 }
 
-struct UniversalOverlayViews: View {
+fileprivate struct UniversalOverlayViews: View {
     @Environment(UniversalOverlayProperties.self) private var properties
-
     var body: some View {
         ZStack {
             ForEach(properties.views) {
@@ -106,7 +145,7 @@ struct UniversalOverlayViews: View {
     }
 }
 
-fileprivate class PassthroughWindow: UIWindow {
+fileprivate class PassThroughWindow: UIWindow {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         guard let hitView = super.hitTest(point, with: event),
               let rootView = rootViewController?.view
@@ -114,8 +153,9 @@ fileprivate class PassthroughWindow: UIWindow {
 
         if #available(iOS 18, *) {
             for subview in rootView.subviews.reversed() {
-                let pointInSubview = subview.convert(point, from: rootView)
-                if subview.hitTest(pointInSubview, with: event) != nil {
+                /// Finding if any of rootview's is receving hit test
+                let pointInSubView = subview.convert(point, from: rootView)
+                if subview.hitTest(pointInSubView, with: event) != nil {
                     return hitView
                 }
             }
