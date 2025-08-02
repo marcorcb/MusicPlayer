@@ -104,12 +104,13 @@ struct AlbumViewModelTests: ~Copyable {
 
     @Test("Load album songs prevents concurrent loads")
     func test_loadAlbumSongs_preventsDuringLoading() async throws {
-
         let albumData = TestDataFactory.createTestAlbumData()
         searchServiceMock.setAlbumResult(albumData)
 
-        async let firstLoad: () = viewModel.loadAlbumSongs()
-        async let secondLoad: () = viewModel.loadAlbumSongs()
+        let viewModel = self.viewModel
+
+        async let firstLoad: () = viewModel!.loadAlbumSongs()
+        async let secondLoad: () = viewModel!.loadAlbumSongs()
         _ = await (firstLoad, secondLoad)
 
         #expect(searchServiceMock.callCount == 1)

@@ -208,8 +208,10 @@ struct SongsViewModelTests: ~Copyable {
         let songs = TestDataFactory.createTestSongs(count: 2)
         searchServiceMock.setSearchResult(songs)
 
-        async let firstSearch: () = viewModel.searchSong(term: "Beatles")
-        async let secondSearch: () = viewModel.searchSong(term: "Queen")
+        let viewModel = self.viewModel
+
+        async let firstSearch: () = viewModel!.searchSong(term: "Beatles")
+        async let secondSearch: () = viewModel!.searchSong(term: "Queen")
         _ = await (firstSearch, secondSearch)
 
         #expect(searchServiceMock.callCount == 1)
