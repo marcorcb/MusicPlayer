@@ -8,38 +8,38 @@
 import SwiftUI
 
 struct MarqueeText: View {
-
+    
     // MARK: - Private properties
-
+    
     @State private var animate = false
     @State private var textWidth: CGFloat = 0
     @State private var containerWidth: CGFloat = 0
-    @State private var animationTimer: Timer?
-
+    @State private var animationTask: Task<Void, Never>?
+    
     private let text: String
     private let font: Font
     private let startDelay: Double
     private let pauseBetweenCycles: Double
-
+    
     private var animationDuration: Double {
         Double(textWidth / 30)
     }
-
+    
     // MARK: - Initialization
-
+    
     init(text: String,
-        font: Font,
-        startDelay: Double = 2.0,
-        pauseBetweenCycles: Double = 1.0
+         font: Font,
+         startDelay: Double = 2.0,
+         pauseBetweenCycles: Double = 1.0
     ) {
         self.text = text
         self.font = font
         self.startDelay = startDelay
         self.pauseBetweenCycles = pauseBetweenCycles
     }
-
+    
     // MARK: - Body
-
+    
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -48,10 +48,10 @@ struct MarqueeText: View {
                         Text(text)
                             .font(font)
                             .fixedSize(horizontal: true, vertical: false)
-
+                        
                         Spacer()
                             .frame(width: 40)
-
+                        
                         Text(text)
                             .font(font)
                             .fixedSize(horizontal: true, vertical: false)
@@ -94,7 +94,7 @@ struct MarqueeText: View {
                         .onChange(of: text) {
                             textWidth = proxy.size.width
                             stopAnimation()
-
+                            
                             if textWidth > containerWidth {
                                 startAnimationCycle()
                             }
@@ -115,36 +115,44 @@ struct MarqueeText: View {
             }
         }
     }
-
+    
+    @MainActor
     private func startAnimationCycle() {
         guard textWidth > containerWidth else { return }
-
+        
         animate = false
-        animationTimer?.invalidate()
-
-        animationTimer = Timer.scheduledTimer(withTimeInterval: startDelay, repeats: false) { _ in
-            startSingleAnimation()
+        stopAnimation()
+        
+        animationTask = Task {
+            try? await Task.sleep(for: .seconds(startDelay))
+            guard !Task.isCancelled else { return }
+            await startSingleAnimation()
         }
     }
-
-    private func startSingleAnimation() {
+    
+    @MainActor
+    private func startSingleAnimation() async {
+        guard !Task.isCancelled else { return }
+        
         animate = true
-
+        
         let totalCycleTime = animationDuration + pauseBetweenCycles
-        animationTimer = Timer.scheduledTimer(withTimeInterval: totalCycleTime, repeats: false) { _ in
-
-            animate = false
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                startSingleAnimation()
-            }
-        }
+        
+        try? await Task.sleep(for: .seconds(totalCycleTime))
+        guard !Task.isCancelled else { return }
+        
+        animate = false
+        
+        try? await Task.sleep(for: .seconds(0.1))
+        guard !Task.isCancelled else { return }
+        
+        await startSingleAnimation()
     }
-
+    
     private func stopAnimation() {
         animate = false
-        animationTimer?.invalidate()
-        animationTimer = nil
+        animationTask?.cancel()
+        animationTask = nil
     }
 }
 
@@ -160,7 +168,7 @@ struct MarqueeText_Previews: PreviewProvider {
             )
             .frame(height: 30)
             .foregroundStyle(.backgroundPrimaryInverted)
-
+            
             MarqueeText(
                 text: "This is a very long song title that should start in place and then scroll to the left like Apple Music",
                 font: .system(size: 24, weight: .regular),
@@ -168,7 +176,7 @@ struct MarqueeText_Previews: PreviewProvider {
             )
             .frame(height: 30)
             .foregroundStyle(.backgroundPrimaryInverted)
-
+            
             MarqueeText(
                 text: "Another long title that also should scroll smoothly from left to right",
                 font: .system(size: 18, weight: .medium),

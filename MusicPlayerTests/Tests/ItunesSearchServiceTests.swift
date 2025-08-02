@@ -9,7 +9,7 @@ import Testing
 import Foundation
 @testable import MusicPlayer
 
-struct ItunesSearchServiceTests : ~Copyable {
+struct ItunesSearchServiceTests: ~Copyable {
 
     // MARK: - Public properties
 

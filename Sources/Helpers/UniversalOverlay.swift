@@ -25,9 +25,9 @@ struct RootView<Content: View>: View {
     init(@ViewBuilder content: @escaping () -> Content) {
         self.content = content()
     }
-
+    
     var properties = UniversalOverlayProperties()
-
+    
     var body: some View {
         content
             .environment(properties)
@@ -39,7 +39,7 @@ struct RootView<Content: View>: View {
                 removeKeyboardObservers()
             }
     }
-
+    
     private func setupWindow() {
         if let windowScene = (UIApplication.shared.connectedScenes.first as? UIWindowScene), properties.window == nil {
             let window = PassThroughWindow(windowScene: windowScene)
@@ -50,31 +50,26 @@ struct RootView<Content: View>: View {
             let rootViewController = UIHostingController(rootView: UniversalOverlayViews().environment(properties))
             rootViewController.view.backgroundColor = .clear
             window.rootViewController = rootViewController
-
+            
             properties.window = window
         }
     }
-
+    
+    @MainActor
     private func setupKeyboardObservers() {
-        NotificationCenter.default.addObserver(
-            forName: UIResponder.keyboardWillShowNotification,
-            object: nil,
-            queue: .main
-        ) { _ in
-            // Abaixar o window level quando keyboard aparecer
-            properties.window?.windowLevel = UIWindow.Level.normal - 1
+        Task {
+            for await _ in NotificationCenter.default.notifications(named: UIResponder.keyboardWillShowNotification) {
+                properties.window?.windowLevel = UIWindow.Level.normal - 1
+            }
         }
-
-        NotificationCenter.default.addObserver(
-            forName: UIResponder.keyboardWillHideNotification,
-            object: nil,
-            queue: .main
-        ) { _ in
-            // Restaurar window level quando keyboard desaparecer
-            properties.window?.windowLevel = UIWindow.Level.normal + 0.1
+        
+        Task {
+            for await _ in NotificationCenter.default.notifications(named: UIResponder.keyboardWillHideNotification) {
+                properties.window?.windowLevel = UIWindow.Level.normal + 1
+            }
         }
     }
-
+    
     private func removeKeyboardObservers() {
         NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
         NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
@@ -82,11 +77,12 @@ struct RootView<Content: View>: View {
 }
 
 /// Shared Universal Overlay Properties
+@MainActor
 @Observable
 class UniversalOverlayProperties {
     var window: UIWindow?
     var views: [OverlayView] = []
-
+    
     struct OverlayView: Identifiable {
         var id: String = UUID().uuidString
         var view: AnyView
@@ -100,7 +96,7 @@ fileprivate struct UniversalOverlayModifier<ViewContent: View>: ViewModifier {
     /// Local View Properties
     @Environment(UniversalOverlayProperties.self) private var properties
     @State private var viewID: String?
-
+    
     func body(content: Content) -> some View {
         content
             .onChange(of: show, initial: true) { oldValue, newValue in
@@ -111,24 +107,24 @@ fileprivate struct UniversalOverlayModifier<ViewContent: View>: ViewModifier {
                 }
             }
     }
-
+    
     private func addView() {
         if properties.window != nil && viewID == nil {
             viewID = UUID().uuidString
             guard let viewID else { return }
-
+            
             withAnimation(animation) {
                 properties.views.append(.init(id: viewID, view: .init(viewContent)))
             }
         }
     }
-
+    
     private func removeView() {
         if let viewID {
             withAnimation(animation) {
                 properties.views.removeAll(where: { $0.id == viewID })
             }
-
+            
             self.viewID = nil
         }
     }
@@ -150,7 +146,7 @@ fileprivate class PassThroughWindow: UIWindow {
         guard let hitView = super.hitTest(point, with: event),
               let rootView = rootViewController?.view
         else { return nil }
-
+        
         if #available(iOS 18, *) {
             for subview in rootView.subviews.reversed() {
                 /// Finding if any of rootview's is receving hit test
@@ -159,7 +155,7 @@ fileprivate class PassThroughWindow: UIWindow {
                     return hitView
                 }
             }
-
+            
             return nil
         } else {
             return hitView == rootView ? nil : hitView

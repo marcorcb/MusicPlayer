@@ -12,15 +12,15 @@ enum NetworkingError: Error {
     case otherError(innerError: Error)
 }
 
-protocol URLSessionProtocol {
+protocol URLSessionProtocol: Sendable {
     func data(from url: URL) async throws -> (Data, URLResponse)
 }
 
 extension URLSession: URLSessionProtocol { }
 
-protocol ItunesSearchServiceProtocol: AnyObject {
-    func searchSongs(term: String, offset: Int, limit: Int) async throws (Error) -> [Song]
-    func fetchSongsFromAlbum(albumID: Int) async throws(any Error) -> AlbumData
+protocol ItunesSearchServiceProtocol: Sendable {
+    func searchSongs(term: String, offset: Int, limit: Int) async throws -> [Song]
+    func fetchSongsFromAlbum(albumID: Int) async throws -> AlbumData
 }
 
 final class ItunesSearchService: ItunesSearchServiceProtocol {
@@ -44,7 +44,7 @@ final class ItunesSearchService: ItunesSearchServiceProtocol {
     
     // MARK: - Public methods
     
-    func searchSongs(term: String, offset: Int, limit: Int) async throws (Error) -> [Song] {
+    func searchSongs(term: String, offset: Int, limit: Int) async throws -> [Song] {
         do {
             let url = try buildSearchURL(term: term, offset: offset, limit: limit)
             let (data, _) = try await urlSession.data(from: url)
@@ -57,7 +57,7 @@ final class ItunesSearchService: ItunesSearchServiceProtocol {
         }
     }
     
-    func fetchSongsFromAlbum(albumID: Int) async throws(any Error) -> AlbumData {
+    func fetchSongsFromAlbum(albumID: Int) async throws -> AlbumData {
         do {
             let url = try buildLookupURL(albumID: albumID)
             let (data, _) = try await urlSession.data(from: url)

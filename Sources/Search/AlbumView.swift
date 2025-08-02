@@ -34,6 +34,7 @@ struct AlbumView: View {
             }
         }
         .background(.backgroundPrimary)
+        .task { await viewModel.loadAlbumSongs() }
     }
 
     @ViewBuilder
@@ -106,7 +107,7 @@ struct AlbumView: View {
 
                     ErrorView(title: "Error loading tracks",
                               message: errorMessage) {
-                        viewModel.loadAlbumSongs()
+                        Task { await viewModel.loadAlbumSongs() }
                     }
 
                     Spacer()
@@ -134,7 +135,7 @@ struct AlbumView: View {
         .scrollContentBackground(.hidden)
         .background(.backgroundPrimary)
         .refreshable {
-            viewModel.refreshAlbumSongs()
+            await viewModel.refreshAlbumSongs()
         }
     }
 }

@@ -8,18 +8,16 @@
 import Foundation
 @testable import MusicPlayer
 
-class ItunesSearchServiceMock: ItunesSearchServiceProtocol {
+final class ItunesSearchServiceMock: ItunesSearchServiceProtocol {
     // Songs
     var searchResult: [Song] = []
     var lastSearchTerm: String?
     var lastOffset: Int?
     var lastLimit: Int?
-    var searchDelay: TimeInterval = 0
 
     // Album
     var albumResult: AlbumData?
     var lastAlbumID: Int?
-    var fetchDelay: TimeInterval = 0
 
     var shouldThrowError = false
     var errorToThrow: Error = NetworkingError.otherError(innerError: NSError(domain: "Test", code: 500))
@@ -31,10 +29,6 @@ class ItunesSearchServiceMock: ItunesSearchServiceProtocol {
         lastOffset = offset
         lastLimit = limit
 
-        if searchDelay > 0 {
-            try await Task.sleep(nanoseconds: UInt64(searchDelay * 1_000_000_000))
-        }
-
         if shouldThrowError {
             throw errorToThrow
         }
@@ -45,10 +39,6 @@ class ItunesSearchServiceMock: ItunesSearchServiceProtocol {
     func fetchSongsFromAlbum(albumID: Int) async throws -> AlbumData {
         callCount += 1
         lastAlbumID = albumID
-
-        if fetchDelay > 0 {
-            try await Task.sleep(nanoseconds: UInt64(fetchDelay * 1_000_000_000))
-        }
 
         if shouldThrowError {
             throw errorToThrow
@@ -74,8 +64,6 @@ class ItunesSearchServiceMock: ItunesSearchServiceProtocol {
         lastAlbumID = nil
         lastOffset = nil
         lastLimit = nil
-        searchDelay = 0
-        fetchDelay = 0
     }
 
     func setSearchResult(_ songs: [Song]) {

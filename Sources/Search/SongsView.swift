@@ -43,7 +43,7 @@ struct SongsView: View {
                                               trailing: 0))
                     .contentShape(Rectangle())
                     .onAppear {
-                        viewModel.loadMoreSongsIfNeeded(currentSong: song)
+                        Task { await viewModel.loadMoreSongsIfNeeded(currentSong: song) }
                     }
                 }
 
@@ -66,7 +66,7 @@ struct SongsView: View {
 
                         ErrorView(title: "Song search error",
                                   message: errorMessage) {
-                            viewModel.searchSong(term: viewModel.searchText)
+                            Task { await viewModel.searchSong(term: viewModel.searchText) }
                         }
 
                         Spacer()
@@ -106,7 +106,7 @@ struct SongsView: View {
                 }
             }
             .refreshable {
-                viewModel.searchSong(term: viewModel.searchText)
+                await viewModel.searchSong(term: viewModel.searchText)
             }
             .scrollContentBackground(.hidden)
         }
@@ -118,7 +118,7 @@ struct SongsView: View {
             prompt: "Search"
         )
         .onSubmit(of: .search) {
-            viewModel.searchSong(term: viewModel.searchText)
+            Task { await viewModel.searchSong(term: viewModel.searchText) }
             isSearching = false
         }
         .onChange(of: viewModel.searchText) { oldValue, newValue in

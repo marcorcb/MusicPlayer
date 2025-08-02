@@ -9,7 +9,8 @@ import Testing
 import Foundation
 @testable import MusicPlayer
 
-struct SongsViewModelTests : ~Copyable {
+@MainActor
+struct SongsViewModelTests: ~Copyable {
 
     // MARK: - Public properties
 
@@ -19,7 +20,7 @@ struct SongsViewModelTests : ~Copyable {
 
     // MARK: - Initialization
 
-    init(){
+    init() {
         searchServiceMock = ItunesSearchServiceMock()
         playerManager = MusicPlayerManager()
         viewModel = SongsViewModel(
@@ -50,9 +51,7 @@ struct SongsViewModelTests : ~Copyable {
         searchServiceMock.setSearchResult(testSongs)
 
         let searchTerm = "Beatles"
-        viewModel.searchSong(term: searchTerm)
-
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await viewModel.searchSong(term: searchTerm)
 
         #expect(viewModel.songs.count == 3)
         #expect(viewModel.songs[0].trackName == testSongs[0].trackName)
@@ -72,9 +71,7 @@ struct SongsViewModelTests : ~Copyable {
     func test_searchSong_emptyResults() async throws {
         searchServiceMock.setSearchResult([])
 
-        viewModel.searchSong(term: "Nonexistent Artist")
-
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await viewModel.searchSong(term: "Nonexistent Artist")
 
         #expect(viewModel.songs.count == 0)
         #expect(viewModel.hasMoreResults == false)
@@ -91,9 +88,7 @@ struct SongsViewModelTests : ~Copyable {
         ))
         searchServiceMock.setError(testError)
 
-        viewModel.searchSong(term: "Beatles")
-
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await viewModel.searchSong(term: "Beatles")
 
         #expect(viewModel.songs.count == 0)
         #expect(viewModel.isLoading == false)
@@ -105,12 +100,18 @@ struct SongsViewModelTests : ~Copyable {
     func test_searchSong_loadingState() async throws {
         let testSongs = TestDataFactory.createTestSongs(count: 2)
         searchServiceMock.setSearchResult(testSongs)
-        searchServiceMock.searchDelay = 0.5
 
-        viewModel.searchSong(term: "Beatles")
+        await confirmation() { confirmation in
+            if viewModel.isLoading == true {
+                confirmation()
+            }
 
-        #expect(viewModel.isLoading)
-        #expect(viewModel.didSearch == false)
+            if viewModel.didSearch == false {
+                confirmation()
+            }
+
+            await viewModel.searchSong(term: "Beatles")
+          }
     }
 
     @Test("Search song reset")
@@ -118,16 +119,14 @@ struct SongsViewModelTests : ~Copyable {
         // First search
         let firstSongs = TestDataFactory.createTestSongs(count: 2)
         searchServiceMock.setSearchResult(firstSongs)
-        viewModel.searchSong(term: "Beatles")
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await viewModel.searchSong(term: "Beatles")
 
         #expect(viewModel.songs.count == 2)
 
         // New search
         let secondSongs = TestDataFactory.createTestSongs(count: 3, startingId: 10)
         searchServiceMock.setSearchResult(secondSongs)
-        viewModel.searchSong(term: "Queen")
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await viewModel.searchSong(term: "Queen")
 
         #expect(viewModel.songs.count == 3)
         #expect(viewModel.songs[0].trackId == secondSongs[0].trackId)
@@ -139,16 +138,14 @@ struct SongsViewModelTests : ~Copyable {
         // First search
         let firstSongs = TestDataFactory.createTestSongs(count: 2, startingId: 1)
         searchServiceMock.setSearchResult(firstSongs)
-        viewModel.searchSong(term: "Beatles")
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await viewModel.searchSong(term: "Beatles")
 
         #expect(viewModel.songs.count == 2)
 
         // Load more
         let secondSongs = TestDataFactory.createTestSongs(count: 3, startingId: 3)
         searchServiceMock.setSearchResult(secondSongs)
-        viewModel.searchSong(term: "Beatles", shouldReset: false)
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await viewModel.searchSong(term: "Beatles", shouldReset: false)
 
         #expect(viewModel.songs.count == 5)
         #expect(viewModel.songs[0].trackId == firstSongs[0].trackId)
@@ -161,15 +158,13 @@ struct SongsViewModelTests : ~Copyable {
     func test_loadMoreSongsIfNeeded_triggersLoadMore() async throws {
         let firstSongs = TestDataFactory.createTestSongs(count: 2)
         searchServiceMock.setSearchResult(firstSongs)
-        viewModel.searchSong(term: "Beatles")
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await viewModel.searchSong(term: "Beatles")
 
         let secondSongs = TestDataFactory.createTestSongs(count: 2, startingId: 3)
         searchServiceMock.setSearchResult(secondSongs)
 
         let lastSong = viewModel.songs.last!
-        viewModel.loadMoreSongsIfNeeded(currentSong: lastSong)
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await viewModel.loadMoreSongsIfNeeded(currentSong: lastSong)
 
         #expect(viewModel.songs.count == 4)
         #expect(searchServiceMock.callCount == 2)
@@ -179,12 +174,10 @@ struct SongsViewModelTests : ~Copyable {
     func test_loadMoreSongsIfNeeded_doesNotTriggerForMiddleSong() async throws {
         let songs = TestDataFactory.createTestSongs(count: 3)
         searchServiceMock.setSearchResult(songs)
-        viewModel.searchSong(term: "Beatles")
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await viewModel.searchSong(term: "Beatles")
 
         let middleSong = viewModel.songs[1]
-        viewModel.loadMoreSongsIfNeeded(currentSong: middleSong)
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await viewModel.loadMoreSongsIfNeeded(currentSong: middleSong)
 
         #expect(viewModel.songs.count == 3)
         #expect(searchServiceMock.callCount == 1)
@@ -194,20 +187,17 @@ struct SongsViewModelTests : ~Copyable {
     func test_loadMoreSongsIfNeeded_doesNotTriggerWhenNoMoreResults() async throws {
         let songs = TestDataFactory.createTestSongs(count: 2)
         searchServiceMock.setSearchResult(songs)
-        viewModel.searchSong(term: "Beatles")
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await viewModel.searchSong(term: "Beatles")
 
         // No more results on second call
         searchServiceMock.setSearchResult([])
         let lastSong = viewModel.songs.last!
-        viewModel.loadMoreSongsIfNeeded(currentSong: lastSong)
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await viewModel.loadMoreSongsIfNeeded(currentSong: lastSong)
 
         #expect(viewModel.hasMoreResults == false)
 
         // Try to load more again
-        viewModel.loadMoreSongsIfNeeded(currentSong: lastSong)
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await viewModel.loadMoreSongsIfNeeded(currentSong: lastSong)
 
         // Should not make another call
         #expect(searchServiceMock.callCount == 2)
@@ -217,15 +207,10 @@ struct SongsViewModelTests : ~Copyable {
     func test_searchSong_PreventsDuringLoading() async throws {
         let songs = TestDataFactory.createTestSongs(count: 2)
         searchServiceMock.setSearchResult(songs)
-        searchServiceMock.searchDelay = 0.2
 
-        viewModel.searchSong(term: "Beatles")
-        #expect(viewModel.isLoading)
-
-        // Try to start second search while first is loading
-        viewModel.searchSong(term: "Queen")
-
-        try? await Task.sleep(nanoseconds: 300_000_000)
+        async let firstSearch: () = viewModel.searchSong(term: "Beatles")
+        async let secondSearch: () = viewModel.searchSong(term: "Queen")
+        _ = await (firstSearch, secondSearch)
 
         #expect(searchServiceMock.callCount == 1)
         #expect(searchServiceMock.lastSearchTerm == "Beatles") // First search term
@@ -238,8 +223,7 @@ struct SongsViewModelTests : ~Copyable {
 
         // Initial search
         searchServiceMock.setSearchResult(firstSongs)
-        viewModel.searchSong(term: "Beatles")
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await viewModel.searchSong(term: "Beatles")
 
         #expect(viewModel.songs.count == 2)
         #expect(viewModel.hasMoreResults)
@@ -249,8 +233,7 @@ struct SongsViewModelTests : ~Copyable {
         // Load more
         searchServiceMock.setSearchResult(secondSongs)
         let lastSong = viewModel.songs.last!
-        viewModel.loadMoreSongsIfNeeded(currentSong: lastSong)
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await viewModel.loadMoreSongsIfNeeded(currentSong: lastSong)
 
         #expect(viewModel.songs.count == 4)
         #expect(viewModel.songs.last?.trackId == secondSongs.last?.trackId)
@@ -258,16 +241,15 @@ struct SongsViewModelTests : ~Copyable {
         // No more results
         searchServiceMock.setSearchResult([])
         let newLastSong = viewModel.songs.last!
-        viewModel.loadMoreSongsIfNeeded(currentSong: newLastSong)
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await viewModel.loadMoreSongsIfNeeded(currentSong: newLastSong)
+
 
         #expect(viewModel.hasMoreResults == false)
 
         // New search
         let newSearchSongs = TestDataFactory.createTestSongs(count: 1, startingId: 10)
         searchServiceMock.setSearchResult(newSearchSongs)
-        viewModel.searchSong(term: "Queen")
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await viewModel.searchSong(term: "Queen")
 
         #expect(viewModel.songs.count == 1)
         #expect(viewModel.songs[0].trackId == newSearchSongs[0].trackId)

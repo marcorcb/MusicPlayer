@@ -20,6 +20,7 @@ extension String {
     }
 }
 
+extension AVPlayer: @retroactive Sendable {}
 extension AVPlayer: AudioPlayerProtocol {}
 
 extension AVAudioSession: AudioSessionProtocol {}
@@ -36,7 +37,7 @@ extension Song {
                                previewUrl: "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview112/v4/6c/60/cf/6c60cf91-e098-84bc-79af-8f3615b57b19/mzaf_12714078272888357351.plus.aac.p.m4a",
                                collectionName: "Hybrid Theory",
                                trackNumber: 8)
-
+    
     static let mockSongs: [Song] = [
         Song(trackId: 185731686,
              collectionId: 185731554,

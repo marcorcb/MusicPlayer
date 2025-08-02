@@ -7,6 +7,7 @@
 
 import Foundation
 
+@MainActor
 final class SongsViewModel: ObservableObject {
 
     // MARK: - Public properties
@@ -36,7 +37,7 @@ final class SongsViewModel: ObservableObject {
 
     // MARK: - Public methods
 
-    func searchSong(term: String, shouldReset: Bool = true) {
+    func searchSong(term: String, shouldReset: Bool = true) async {
         if shouldReset {
             currentSearchTerm = term
             currentOffset = 0
@@ -50,37 +51,33 @@ final class SongsViewModel: ObservableObject {
 
         isLoading = true
 
-        Task {
-            do {
-                let newSongs = try await itunesSearchService.searchSongs(term: term, offset: currentOffset, limit: limit)
+        do {
+            let newSongs = try await itunesSearchService.searchSongs(term: term,
+                                                                     offset: currentOffset,
+                                                                     limit: limit)
 
-                await MainActor.run {
-                    if shouldReset {
-                        self.songs = newSongs
-                    } else {
-                        self.songs.append(contentsOf: newSongs)
-                    }
-
-                    self.currentOffset += newSongs.count
-                    self.hasMoreResults = !newSongs.isEmpty
-                    self.isLoading = false
-                    didSearch = true
-                }
-            } catch let error {
-                await MainActor.run {
-                    self.isLoading = false
-                    didSearch = true
-                    errorMessage = error.localizedDescription
-                }
+            if shouldReset {
+                self.songs = newSongs
+            } else {
+                self.songs.append(contentsOf: newSongs)
             }
+
+            self.currentOffset += newSongs.count
+            self.hasMoreResults = !newSongs.isEmpty
+            self.isLoading = false
+            didSearch = true
+        } catch let error {
+            self.isLoading = false
+            didSearch = true
+            errorMessage = error.localizedDescription
         }
     }
 
-    func loadMoreSongsIfNeeded(currentSong: Song) {
+    func loadMoreSongsIfNeeded(currentSong: Song) async {
         guard let lastSong = songs.last else { return }
 
         if currentSong.trackId == lastSong.trackId && hasMoreResults {
-            searchSong(term: currentSearchTerm, shouldReset: false)
+            await searchSong(term: currentSearchTerm, shouldReset: false)
         }
     }
 }
