@@ -32,7 +32,7 @@ struct EmptyStateView: View {
             Text(title)
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(.backgroundPrimaryInverted)
-            
+
             Text(message)
                 .font(.system(size: 14, weight: .regular))
                 .foregroundStyle(.textSecondary)

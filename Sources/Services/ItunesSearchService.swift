@@ -24,26 +24,26 @@ protocol ItunesSearchServiceProtocol: Sendable {
 }
 
 final class ItunesSearchService: ItunesSearchServiceProtocol {
-    
+
     // MARK: - Private properties
-    
+
     private let urlScheme = "https"
     private let urlHost = "itunes.apple.com"
     private let urlSession: URLSessionProtocol
-    
+
     private enum Paths: String {
         case search = "/search"
         case lookup = "/lookup"
     }
-    
+
     // MARK: Initialization
-    
+
     init(urlSession: URLSessionProtocol = URLSession.shared) {
         self.urlSession = urlSession
     }
-    
+
     // MARK: - Public methods
-    
+
     func searchSongs(term: String, offset: Int, limit: Int) async throws -> [Song] {
         do {
             let url = try buildSearchURL(term: term, offset: offset, limit: limit)
@@ -56,27 +56,27 @@ final class ItunesSearchService: ItunesSearchServiceProtocol {
             throw NetworkingError.otherError(innerError: error)
         }
     }
-    
+
     func fetchSongsFromAlbum(albumID: Int) async throws -> AlbumData {
         do {
             let url = try buildLookupURL(albumID: albumID)
             let (data, _) = try await urlSession.data(from: url)
             let response = try JSONDecoder().decode(AlbumLookupResponse.self, from: data)
-            
+
             let albumCollection = response.results.compactMap { item in
                 if case .collection(let collection) = item {
                     return collection
                 }
                 return nil
             }.first
-            
+
             let tracks = response.results.compactMap { item in
                 if case .track(let track) = item {
                     return track
                 }
                 return nil
             }
-            
+
             guard let album = albumCollection else {
                 throw NetworkingError.otherError(innerError: NSError(
                     domain: "AlbumLookup",
@@ -84,7 +84,7 @@ final class ItunesSearchService: ItunesSearchServiceProtocol {
                     userInfo: [NSLocalizedDescriptionKey: "Album collection not found"]
                 ))
             }
-            
+
             return AlbumData(album: album, tracks: tracks)
         } catch let error as NetworkingError {
             throw error
@@ -92,9 +92,9 @@ final class ItunesSearchService: ItunesSearchServiceProtocol {
             throw NetworkingError.otherError(innerError: error)
         }
     }
-    
+
     // MARK: - Private methods
-    
+
     private func buildSearchURL(term: String, offset: Int, limit: Int) throws -> URL {
         var components = URLComponents()
         components.scheme = urlScheme
@@ -107,14 +107,14 @@ final class ItunesSearchService: ItunesSearchServiceProtocol {
             URLQueryItem(name: "limit", value: String(limit)),
             URLQueryItem(name: "offset", value: String(offset))
         ]
-        
+
         guard let url = components.url else {
             throw NetworkingError.urlMalformed
         }
-        
+
         return url
     }
-    
+
     private func buildLookupURL(albumID: Int) throws -> URL {
         var components = URLComponents()
         components.scheme = urlScheme
@@ -125,11 +125,11 @@ final class ItunesSearchService: ItunesSearchServiceProtocol {
             URLQueryItem(name: "entity", value: "song"),
             URLQueryItem(name: "limit", value: "200")
         ]
-        
+
         guard let url = components.url else {
             throw NetworkingError.urlMalformed
         }
-        
+
         return url
     }
 }

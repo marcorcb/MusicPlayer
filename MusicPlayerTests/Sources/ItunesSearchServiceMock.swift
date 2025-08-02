@@ -8,7 +8,7 @@
 import Foundation
 @testable import MusicPlayer
 
-final class ItunesSearchServiceMock: ItunesSearchServiceProtocol {
+final class ItunesSearchServiceMock: ItunesSearchServiceProtocol, @unchecked Sendable {
     // Songs
     var searchResult: [Song] = []
     var lastSearchTerm: String?

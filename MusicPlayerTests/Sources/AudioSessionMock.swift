@@ -8,7 +8,7 @@
 import AVFoundation
 @testable import MusicPlayer
 
-final class AudioSessionMock: AudioSessionProtocol {
+final class AudioSessionMock: AudioSessionProtocol, @unchecked Sendable {
 
     var setCategoryCallCount = 0
     var setActiveCallCount = 0

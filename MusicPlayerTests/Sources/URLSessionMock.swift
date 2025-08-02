@@ -8,7 +8,7 @@
 import Foundation
 @testable import MusicPlayer
 
-final class URLSessionMock: URLSessionProtocol {
+final class URLSessionMock: URLSessionProtocol, @unchecked Sendable {
     
     var mockData: Data?
     var mockResponse: URLResponse?

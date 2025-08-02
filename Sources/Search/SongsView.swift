@@ -121,7 +121,7 @@ struct SongsView: View {
             Task { await viewModel.searchSong(term: viewModel.searchText) }
             isSearching = false
         }
-        .onChange(of: viewModel.searchText) { oldValue, newValue in
+        .onChange(of: viewModel.searchText) { _, newValue in
             if newValue.isEmpty {
                 viewModel.songs = []
                 viewModel.hasMoreResults = true

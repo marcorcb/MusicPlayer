@@ -27,7 +27,7 @@ struct SongItemView: View {
         HStack {
             HStack(alignment: .center, spacing: 16) {
                 ArtworkImage(artworkURL: URL(string: song.artworkUrl100))
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text(song.trackName)
                         .font(.system(size: 16, weight: .regular))
@@ -37,16 +37,15 @@ struct SongItemView: View {
                         .font(.system(size: 12, weight: .regular))
                         .foregroundStyle(.textSecondary)
                 }
-                
+
                 Spacer()
-                
-                
+
             }
             .contentShape(Rectangle())
             .onTapGesture {
                 onTap()
             }
-            
+
             MoreOptionsButtonView(song: song)
         }
     }

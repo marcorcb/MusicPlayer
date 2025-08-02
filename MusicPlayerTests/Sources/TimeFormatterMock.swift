@@ -8,7 +8,7 @@
 import Foundation
 @testable import MusicPlayer
 
-final class TimeFormatterMock: TimeFormatterProtocol {
+final class TimeFormatterMock: TimeFormatterProtocol, @unchecked Sendable {
 
     var formatTimeCallCount = 0
     var lastFormattedTime: TimeInterval?

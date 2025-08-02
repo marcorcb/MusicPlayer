@@ -100,8 +100,9 @@ struct ExpandableMusicPlayerView: View {
                 Text(playerManager.playerError ?? "")
             }
         }
-        .onAppear() {
-            if let window = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.keyWindow, mainWindow == nil {
+        .onAppear {
+            if let window = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.keyWindow,
+                mainWindow == nil {
                 mainWindow = window
             }
         }

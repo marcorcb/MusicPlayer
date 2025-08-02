@@ -9,22 +9,22 @@ import Foundation
 
 @MainActor
 final class AlbumViewModel: ObservableObject {
-    
+
     // MARK: - Public properties
-    
+
     @Published var songs: [Song] = []
     @Published var playerManager: MusicPlayerManager
     @Published var album: AlbumData?
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
-    
+
     // MARK: - Private properties
-    
+
     private let itunesSearchService: ItunesSearchServiceProtocol
     private let selectedSong: Song
-    
+
     // MARK: Initialization
-    
+
     init(selectedSong: Song,
          playerManager: MusicPlayerManager,
          itunesSearchService: ItunesSearchServiceProtocol = ItunesSearchService()) {
@@ -32,9 +32,9 @@ final class AlbumViewModel: ObservableObject {
         self.playerManager = playerManager
         self.itunesSearchService = itunesSearchService
     }
-    
+
     // MARK: - Public methods
-    
+
     func loadAlbumSongs() async {
         guard !isLoading else { return }
 
@@ -52,11 +52,11 @@ final class AlbumViewModel: ObservableObject {
             self.isLoading = false
         }
     }
-    
+
     func refreshAlbumSongs() async {
         album = nil
         songs = []
-        
+
         await loadAlbumSongs()
     }
 }

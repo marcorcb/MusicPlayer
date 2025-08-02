@@ -452,15 +452,15 @@ struct MusicPlayerManagerTests: ~Copyable {
         #expect(sut.currentTime != 45.0)
     }
 
-//    @Test("Cleanup removes time observer")
-//    mutating func test_cleanupRemovesTimeObserver() async throws {
-//        let songs = [Song.mock()]
-//        sut.play(song: songs[0], songList: songs)
-//
-//        sut = nil
-//
-//        #expect(audioPlayerMock.removeTimeObserverCallCount == 1)
-//    }
+    @Test("Cleanup removes time observer")
+    func test_cleanupRemovesTimeObserver() async throws {
+        let songs = [Song.mock()]
+        sut.play(song: songs[0], songList: songs)
+
+        sut.cleanup()
+
+        #expect(audioPlayerMock.removeTimeObserverCallCount == 1)
+    }
 
     @Test("Player controls playback flow")
     func test_playerControlsPlaybackFlow_PlayPauseResumeStop() async throws {

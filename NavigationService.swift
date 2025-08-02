@@ -13,7 +13,7 @@ protocol NavigationServiceProtocol {
 
 @Observable
 class NavigationService: NavigationServiceProtocol {
-    var shouldNavigateToAlbum: Song? = nil
+    var shouldNavigateToAlbum: Song?
 
     func navigateToAlbum(_ song: Song) {
         shouldNavigateToAlbum = song

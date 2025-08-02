@@ -8,7 +8,7 @@
 import AVFoundation
 @testable import MusicPlayer
 
-final class AudioPlayerMock: AudioPlayerProtocol {
+final class AudioPlayerMock: AudioPlayerProtocol, @unchecked Sendable {
 
     var currentItem: AVPlayerItem?
     var timeControlStatus: AVPlayer.TimeControlStatus = .paused
