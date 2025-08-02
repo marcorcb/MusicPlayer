@@ -12,50 +12,41 @@ enum NetworkingError: Error {
     case otherError(innerError: Error)
 }
 
+protocol URLSessionProtocol {
+    func data(from url: URL) async throws -> (Data, URLResponse)
+}
+
+extension URLSession: URLSessionProtocol { }
+
 protocol ItunesSearchServiceProtocol: AnyObject {
     func searchSongs(term: String, offset: Int, limit: Int) async throws (Error) -> [Song]
-    func fetchSongsFromAnAlbum(albumID: Int) async throws(any Error) -> AlbumData
+    func fetchSongsFromAlbum(albumID: Int) async throws(any Error) -> AlbumData
 }
 
 final class ItunesSearchService: ItunesSearchServiceProtocol {
-
+    
     // MARK: - Private properties
-
+    
     private let urlScheme = "https"
     private let urlHost = "itunes.apple.com"
-    private let urlSession: URLSession
-
-    private enum paths: String {
+    private let urlSession: URLSessionProtocol
+    
+    private enum Paths: String {
         case search = "/search"
         case lookup = "/lookup"
     }
-
+    
     // MARK: Initialization
-
-    init(urlSession: URLSession = URLSession.shared) {
+    
+    init(urlSession: URLSessionProtocol = URLSession.shared) {
         self.urlSession = urlSession
     }
-
+    
     // MARK: - Public methods
-
+    
     func searchSongs(term: String, offset: Int, limit: Int) async throws (Error) -> [Song] {
         do {
-            var components = URLComponents()
-            components.scheme = urlScheme
-            components.host = urlHost
-            components.path = paths.search.rawValue
-            components.queryItems = [
-                URLQueryItem(name: "term", value: term),
-                URLQueryItem(name: "media", value: "music"),
-                URLQueryItem(name: "entity", value: "song"),
-                URLQueryItem(name: "limit", value: String(limit)),
-                URLQueryItem(name: "offset", value: String(offset))
-            ]
-
-            guard let url = components.url else {
-                throw NetworkingError.urlMalformed
-            }
-
+            let url = try buildSearchURL(term: term, offset: offset, limit: limit)
             let (data, _) = try await urlSession.data(from: url)
             let response = try JSONDecoder().decode(SongSearchResponse.self, from: data)
             return response.results
@@ -65,53 +56,80 @@ final class ItunesSearchService: ItunesSearchServiceProtocol {
             throw NetworkingError.otherError(innerError: error)
         }
     }
-
-    func fetchSongsFromAnAlbum(albumID: Int) async throws(any Error) -> AlbumData {
+    
+    func fetchSongsFromAlbum(albumID: Int) async throws(any Error) -> AlbumData {
         do {
-            var components = URLComponents()
-            components.scheme = urlScheme
-            components.host = urlHost
-            components.path = paths.lookup.rawValue
-            components.queryItems = [
-                URLQueryItem(name: "id", value: String(albumID)),
-                URLQueryItem(name: "entity", value: "song"),
-                URLQueryItem(name: "limit", value: "200")
-            ]
-
-            guard let url = components.url else {
-                throw NetworkingError.urlMalformed
-            }
-
+            let url = try buildLookupURL(albumID: albumID)
             let (data, _) = try await urlSession.data(from: url)
             let response = try JSONDecoder().decode(AlbumLookupResponse.self, from: data)
-
+            
             let albumCollection = response.results.compactMap { item in
                 if case .collection(let collection) = item {
                     return collection
                 }
                 return nil
             }.first
-
+            
             let tracks = response.results.compactMap { item in
                 if case .track(let track) = item {
                     return track
                 }
                 return nil
             }
-
+            
             guard let album = albumCollection else {
-                 throw NetworkingError.otherError(innerError: NSError(
-                     domain: "AlbumLookup",
-                     code: 404,
-                     userInfo: [NSLocalizedDescriptionKey: "Album collection not found"]
-                 ))
-             }
-
+                throw NetworkingError.otherError(innerError: NSError(
+                    domain: "AlbumLookup",
+                    code: 404,
+                    userInfo: [NSLocalizedDescriptionKey: "Album collection not found"]
+                ))
+            }
+            
             return AlbumData(album: album, tracks: tracks)
         } catch let error as NetworkingError {
             throw error
         } catch {
             throw NetworkingError.otherError(innerError: error)
         }
+    }
+    
+    // MARK: - Private methods
+    
+    private func buildSearchURL(term: String, offset: Int, limit: Int) throws -> URL {
+        var components = URLComponents()
+        components.scheme = urlScheme
+        components.host = urlHost
+        components.path = Paths.search.rawValue
+        components.queryItems = [
+            URLQueryItem(name: "term", value: term),
+            URLQueryItem(name: "media", value: "music"),
+            URLQueryItem(name: "entity", value: "song"),
+            URLQueryItem(name: "limit", value: String(limit)),
+            URLQueryItem(name: "offset", value: String(offset))
+        ]
+        
+        guard let url = components.url else {
+            throw NetworkingError.urlMalformed
+        }
+        
+        return url
+    }
+    
+    private func buildLookupURL(albumID: Int) throws -> URL {
+        var components = URLComponents()
+        components.scheme = urlScheme
+        components.host = urlHost
+        components.path = Paths.lookup.rawValue
+        components.queryItems = [
+            URLQueryItem(name: "id", value: String(albumID)),
+            URLQueryItem(name: "entity", value: "song"),
+            URLQueryItem(name: "limit", value: "200")
+        ]
+        
+        guard let url = components.url else {
+            throw NetworkingError.urlMalformed
+        }
+        
+        return url
     }
 }

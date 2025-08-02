@@ -70,7 +70,7 @@ struct ExpandedPlayerView: View {
                     in: 0...max(playerManager.duration, 1),
                     onEditingChanged: { isEditing in
                         if !isEditing {
-                            playerManager.finishSeeking()
+                            playerManager.finishSeeking() { _ in }
                         }
                     }
                 )

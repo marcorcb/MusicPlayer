@@ -43,7 +43,7 @@ final class AlbumViewModel: ObservableObject {
 
         Task {
             do {
-                let album = try await itunesSearchService.fetchSongsFromAnAlbum(albumID: selectedSong.collectionId)
+                let album = try await itunesSearchService.fetchSongsFromAlbum(albumID: selectedSong.collectionId)
 
                 await MainActor.run {
                     self.album = album

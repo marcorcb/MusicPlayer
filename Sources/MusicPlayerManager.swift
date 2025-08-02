@@ -43,13 +43,13 @@ final class DefaultTimeFormatter: TimeFormatterProtocol {
 }
 
 struct MusicPlayerDependencies {
-    let audioPlayerFactory: () -> AudioPlayerProtocol
+    let audioPlayer: AudioPlayerProtocol
     let audioSession: AudioSessionProtocol
     let notificationCenter: NotificationCenterProtocol
     let timeFormatter: TimeFormatterProtocol
 
     static let `default` = MusicPlayerDependencies(
-        audioPlayerFactory: { AVPlayer() },
+        audioPlayer: AVPlayer(),
         audioSession: AVAudioSession.sharedInstance(),
         notificationCenter: NotificationCenter.default,
         timeFormatter: DefaultTimeFormatter()
@@ -76,10 +76,6 @@ final class MusicPlayerManager: ObservableObject {
 
     @Published var isSeekInProgress: Bool = false
     @Published var seekTime: TimeInterval = 0
-
-    var hasCurrentSong: Bool {
-        currentSong != nil
-    }
 
     var hasNextSong: Bool {
         isRepeatOn || !isCurrentIndexLast
@@ -244,7 +240,7 @@ final class MusicPlayerManager: ObservableObject {
         isPlaying = false
     }
 
-    func finishSeeking() {
+    func finishSeeking(completionHandler: @escaping @Sendable (Bool) -> Void) {
         guard isSeekInProgress else { return }
 
         let cmTime = CMTime(seconds: seekTime, preferredTimescale: 600)
@@ -253,6 +249,7 @@ final class MusicPlayerManager: ObservableObject {
                 await MainActor.run {
                     if completed {
                         self.currentTime = self.seekTime
+                        completionHandler(completed)
                     }
                     self.isSeekInProgress = false
                 }
@@ -328,7 +325,7 @@ final class MusicPlayerManager: ObservableObject {
         playerError = nil
 
         playerItem = AVPlayerItem(url: url)
-        player = dependencies.audioPlayerFactory()
+        player = dependencies.audioPlayer
         player?.replaceCurrentItem(with: playerItem)
 
         observePlayerItem()
