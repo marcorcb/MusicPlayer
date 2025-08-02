@@ -100,6 +100,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		03289BAA2E3DBCB300B6D430 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				03A186CE2E36BA0800857EA7 /* MiniPlayerView.swift */,
+				03A186D92E36D51100857EA7 /* ExpandableMusicPlayerView.swift */,
+				03A186DB2E36DEAB00857EA7 /* ExpandedPlayerView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
 		03679AE22E37CA9800A6B319 /* Search */ = {
 			isa = PBXGroup;
 			children = (
@@ -134,7 +144,6 @@
 		03679AE52E37CAC800A6B319 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				03679AE82E3866DD00A6B319 /* MusicPlayerManager.swift */,
 				03679AE32E37CAAC00A6B319 /* Models */,
 				03679AE72E37CB7D00A6B319 /* Services */,
 				03679AE62E37CB3B00A6B319 /* Views */,
@@ -199,9 +208,8 @@
 		03A186DD2E36DEBA00857EA7 /* Player */ = {
 			isa = PBXGroup;
 			children = (
-				03A186CE2E36BA0800857EA7 /* MiniPlayerView.swift */,
-				03A186D92E36D51100857EA7 /* ExpandableMusicPlayerView.swift */,
-				03A186DB2E36DEAB00857EA7 /* ExpandedPlayerView.swift */,
+				03289BAA2E3DBCB300B6D430 /* Views */,
+				03679AE82E3866DD00A6B319 /* MusicPlayerManager.swift */,
 			);
 			path = Player;
 			sourceTree = "<group>";
